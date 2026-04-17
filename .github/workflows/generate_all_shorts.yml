@@ -1,0 +1,42 @@
+name: Generate 10 Shorts (Local AI)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 16 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg git-lfs
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: |
+          pip install diffusers transformers accelerate imageio
+
+      - name: Download local LLM
+        run: |
+          mkdir -p models/llm
+          wget -O models/llm/phi-2.gguf https://huggingface.co/ggml-org/models/resolve/main/phi-2/phi-2.gguf
+
+      - name: Download llama.cpp
+        run: |
+          git clone https://github.com/ggerganov/llama.cpp
+          cd llama.cpp && make
+
+      - name: Run pipeline
+        run: |
+          python scripts/main_pipeline.py
