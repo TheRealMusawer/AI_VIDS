@@ -3,10 +3,10 @@ name: Generate 10 Shorts (Local AI)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 16 * * *"
+    - cron: "0 16 * * *"  # daily at 16:00 UTC
 
 jobs:
-  build:
+  generate-and-upload:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,25 +18,37 @@ jobs:
           sudo apt update
           sudo apt install -y ffmpeg git-lfs
 
-      - name: Install Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install Python deps
         run: |
-          pip install diffusers transformers accelerate imageio
-
-      - name: Download local LLM
-        run: |
-          mkdir -p models/llm
-          wget -O models/llm/phi-2.gguf https://huggingface.co/ggml-org/models/resolve/main/phi-2/phi-2.gguf
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Download llama.cpp
         run: |
           git clone https://github.com/ggerganov/llama.cpp
           cd llama.cpp && make
 
+      - name: Download local LLM model
+        run: |
+          mkdir -p models/llm
+          # example tiny model; swap to what you want
+          wget -O models/llm/tiny-llm.gguf https://huggingface.co/ggml-org/models/resolve/main/tinyllama-1.1b/tinyllama-1.1b.gguf
+
+      # OPTIONAL: download a local video model later
+      # - name: Download video model
+      #   run: |
+      #     mkdir -p models/video
+      #     # placeholder for text-to-video model
+
       - name: Run pipeline
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
         run: |
           python scripts/main_pipeline.py
