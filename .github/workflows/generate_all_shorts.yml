@@ -16,7 +16,7 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt update
-          sudo apt install -y ffmpeg git-lfs
+          sudo apt install -y ffmpeg git-lfs cmake build-essential
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,22 +28,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download llama.cpp
+      - name: Download and build llama.cpp
         run: |
           git clone https://github.com/ggerganov/llama.cpp
-          cd llama.cpp && make
+          cd llama.cpp
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . --config Release
 
       - name: Download local LLM model
         run: |
           mkdir -p models/llm
-          # example tiny model; swap to what you want
           wget -O models/llm/tiny-llm.gguf https://huggingface.co/ggml-org/models/resolve/main/tinyllama-1.1b/tinyllama-1.1b.gguf
-
-      # OPTIONAL: download a local video model later
-      # - name: Download video model
-      #   run: |
-      #     mkdir -p models/video
-      #     # placeholder for text-to-video model
 
       - name: Run pipeline
         env:
