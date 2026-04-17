@@ -3,7 +3,11 @@ import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-LLAMA_BIN = BASE_DIR / "llama.cpp" / "main"
+
+# NEW llama.cpp binary path (CMake build)
+LLAMA_BIN = BASE_DIR / "llama.cpp" / "build" / "bin" / "llama-cli"
+
+# Local model path
 MODEL_PATH = BASE_DIR / "models" / "llm" / "tiny-llm.gguf"
 
 
@@ -19,14 +23,12 @@ Do NOT add titles, labels, or extra commentary. Just the 3 sentences.
 """
 
     if not LLAMA_BIN.exists():
-        raise RuntimeError("llama.cpp binary not found.")
+        raise RuntimeError(f"llama.cpp binary not found at: {LLAMA_BIN}")
+
     if not MODEL_PATH.exists():
-        raise RuntimeError("LLM model file not found.")
+        raise RuntimeError(f"Model file not found at: {MODEL_PATH}")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
-        tmp.write(prompt.encode("utf-8"))
-        tmp_path = tmp.name
-
+    # Run llama.cpp
     result = subprocess.run(
         [
             str(LLAMA_BIN),
@@ -40,9 +42,11 @@ Do NOT add titles, labels, or extra commentary. Just the 3 sentences.
     )
 
     output = result.stdout.strip()
-    # crude cleanup: take last lines
+
+    # Clean output: take last 3 lines
     lines = [l.strip() for l in output.splitlines() if l.strip()]
     script_text = "\n".join(lines[-3:]) if len(lines) >= 3 else "\n".join(lines)
 
     title = f"{theme} #{abs(hash(script_text)) % 9999}"
+
     return script_text, title
