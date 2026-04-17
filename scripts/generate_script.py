@@ -1,15 +1,27 @@
 import subprocess
-import json
 import tempfile
 from pathlib import Path
 
-MODEL_PATH = "models/llm/phi-2.gguf"  # you will download this in the workflow
+BASE_DIR = Path(__file__).resolve().parent.parent
+LLAMA_BIN = BASE_DIR / "llama.cpp" / "main"
+MODEL_PATH = BASE_DIR / "models" / "llm" / "tiny-llm.gguf"
+
 
 def generate_script_for_theme(theme: str):
     prompt = f"""
-Write a 3-sentence YouTube Shorts script about this theme: {theme}.
-Keep it punchy, interesting, and under 40 words total.
+You are writing a YouTube Shorts script.
+
+Theme: {theme}
+
+Write 3 short sentences, total under 40 words.
+Make it punchy, engaging, and easy to read as on-screen text.
+Do NOT add titles, labels, or extra commentary. Just the 3 sentences.
 """
+
+    if not LLAMA_BIN.exists():
+        raise RuntimeError("llama.cpp binary not found.")
+    if not MODEL_PATH.exists():
+        raise RuntimeError("LLM model file not found.")
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
         tmp.write(prompt.encode("utf-8"))
@@ -17,16 +29,20 @@ Keep it punchy, interesting, and under 40 words total.
 
     result = subprocess.run(
         [
-            "./llama.cpp/main",
-            "-m", MODEL_PATH,
+            str(LLAMA_BIN),
+            "-m", str(MODEL_PATH),
             "-p", prompt,
-            "-n", "120"
+            "-n", "120",
+            "--temp", "0.8"
         ],
         capture_output=True,
         text=True
     )
 
     output = result.stdout.strip()
-    title = f"{theme} #{abs(hash(output)) % 9999}"
+    # crude cleanup: take last lines
+    lines = [l.strip() for l in output.splitlines() if l.strip()]
+    script_text = "\n".join(lines[-3:]) if len(lines) >= 3 else "\n".join(lines)
 
-    return output, title
+    title = f"{theme} #{abs(hash(script_text)) % 9999}"
+    return script_text, title
